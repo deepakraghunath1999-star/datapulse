@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>DataPulse — KPI Dashboard Builder</title>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@300;400;500&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #f5f2ec;
+  --surface: #ffffff;
+  --surface2: #f0ede6;
+  --border: #ddd9d0;
+  --border2: #c8c3b8;
+  --ink: #1a1612;
+  --ink2: #3d3830;
+  --muted: #8a847a;
+  --faint: #c2bdb4;
+  --coral: #e85d3a;
+  --coral-dim: #c04020;
+  --coral-pale: #fde8e2;
+  --teal: #1a7a6e;
+  --teal-pale: #e0f0ee;
+  --amber: #d4860a;
+  --amber-pale: #fef3e0;
+  --blue: #2563b8;
+  --blue-pale: #e8f0fc;
+  --purple: #7c3aed;
+  --purple-pale: #ede9fe;
+  --green: #15803d;
+  --green-pale: #dcfce7;
+  --red: #dc2626;
+  --red-pale: #fee2e2;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--ink); font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 300; min-height: 100vh; }
+
+.header { background: var(--ink); padding: 0 2.5rem; display: flex; align-items: center; justify-content: space-between; height: 56px; position: sticky; top: 0; z-index: 100; }
+.brand { display: flex; align-items: center; gap: 0.8rem; }
+.brand-mark { width: 28px; height: 28px; background: var(--coral); display: flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; font-weight: 500; color: #fff; }
+.brand-name { font-family: 'Libre Baskerville', serif; font-size: 1.1rem; color: #fff; }
+.brand-name span { color: var(--coral); }
+.header-tag { font-family: 'JetBrains Mono', monospace; font-size: 0.58rem; color: #6b6560; letter-spacing: 0.12em; text-transform: uppercase; }
+
+/* UPLOAD */
+.upload-screen { min-height: calc(100vh - 56px); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3rem; text-align: center; }
+.upload-eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; color: var(--coral); letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 1rem; }
+.upload-title { font-family: 'Libre Baskerville', serif; font-size: clamp(2.5rem,5vw,4rem); color: var(--ink); line-height: 1.1; margin-bottom: 0.5rem; }
+.upload-title em { color: var(--coral); font-style: italic; }
+.upload-sub { font-size: 1rem; color: var(--muted); max-width: 520px; margin: 0 auto 3rem; line-height: 1.7; }
+.drop-zone { width: 100%; max-width: 560px; border: 2px dashed var(--border2); background: var(--surface); padding: 3rem 2rem; cursor: pointer; transition: all 0.2s; }
+.drop-zone:hover, .drop-zone.dragover { border-color: var(--coral); background: var(--coral-pale); }
+.drop-icon { font-size: 3rem; margin-bottom: 1rem; }
+.drop-text { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--muted); letter-spacing: 0.08em; margin-bottom: 1.5rem; }
+.drop-btn { display: inline-flex; align-items: center; gap: 0.5rem; background: var(--coral); color: #fff; border: none; padding: 0.7rem 2rem; font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; transition: background 0.2s; }
+.drop-btn:hover { background: var(--coral-dim); }
+input[type="file"] { display: none; }
+.sample-btn { margin-top: 1.5rem; font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; background: none; border: 1px solid var(--border2); padding: 0.5rem 1.2rem; cursor: pointer; transition: all 0.2s; }
+.sample-btn:hover { color: var(--coral); border-color: var(--coral); }
+.feature-row { display: flex; gap: 2rem; margin-top: 3rem; flex-wrap: wrap; justify-content: center; }
+.feature-pill { display: flex; align-items: center; gap: 0.5rem; font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; color: var(--muted); letter-spacing: 0.06em; }
+.feature-pill span { color: var(--coral); }
+
+/* DASHBOARD */
+#dashboard { display: none; }
+.dash-topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0.8rem 2rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.8rem; position: sticky; top: 56px; z-index: 90; }
+.dash-filename { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: var(--ink2); display: flex; align-items: center; gap: 0.5rem; }
+.dash-meta { font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; color: var(--muted); }
+.dash-actions { display: flex; gap: 0.5rem; }
+.dash-btn { font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; letter-spacing: 0.08em; text-transform: uppercase; padding: 0.4rem 0.9rem; cursor: pointer; border: 1px solid var(--border2); color: var(--muted); background: transparent; transition: all 0.2s; }
+.dash-btn:hover { color: var(--coral); border-color: var(--coral); }
+.dash-btn.primary { background: var(--coral); color: #fff; border-color: var(--coral); }
+.dash-btn.primary:hover { background: var(--coral-dim); }
+
+.dash-body { padding: 2rem; }
+.section-label { font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; color: var(--muted); letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.8rem; }
+.section-label::after { content:''; flex:1; height:1px; background:var(--border); }
+
+/* KPI */
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1px; background: var(--border); border: 1px solid var(--border); margin-bottom: 2rem; }
+.kpi-tile { background: var(--surface); padding: 1.5rem; position: relative; }
+.kpi-tile::after { content:''; position:absolute; bottom:0; left:0; right:0; height:3px; }
+.kpi-tile:nth-child(5n+1)::after { background: var(--coral); }
+.kpi-tile:nth-child(5n+2)::after { background: var(--teal); }
+.kpi-tile:nth-child(5n+3)::after { background: var(--amber); }
+.kpi-tile:nth-child(5n+4)::after { background: var(--blue); }
+.kpi-tile:nth-child(5n+5)::after { background: var(--purple); }
+.kpi-col { font-family: 'JetBrains Mono', monospace; font-size: 0.56rem; color: var(--muted); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 0.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kpi-main { font-family: 'Libre Baskerville', serif; font-size: 2rem; color: var(--ink); line-height: 1; margin-bottom: 0.4rem; }
+.kpi-stats { display: flex; flex-wrap: wrap; gap: 0.5rem 0.8rem; }
+.kpi-stat { font-family: 'JetBrains Mono', monospace; font-size: 0.57rem; color: var(--muted); }
+.kpi-stat strong { color: var(--ink2); font-weight: 500; }
+
+/* Charts */
+.charts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+.chart-tile { background: var(--surface); border: 1px solid var(--border); padding: 1.5rem; }
+.chart-tile-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.2rem; }
+.chart-tile-title { font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; color: var(--ink2); letter-spacing: 0.1em; text-transform: uppercase; }
+.chart-tile-sub { font-family: 'JetBrains Mono', monospace; font-size: 0.55rem; color: var(--faint); }
+.chart-wrap { position: relative; height: 240px; }
+
+/* ── STATISTICAL NARRATIVE ── */
+.narrative-section { margin-bottom: 2rem; }
+.narrative-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); margin-bottom: 1rem; }
+.narrative-card { background: var(--surface); padding: 1.4rem; border-top: 3px solid transparent; }
+.narrative-card.coral { border-top-color: var(--coral); }
+.narrative-card.teal { border-top-color: var(--teal); }
+.narrative-card.amber { border-top-color: var(--amber); }
+.narrative-card.blue { border-top-color: var(--blue); }
+.narrative-card.purple { border-top-color: var(--purple); }
+.narrative-card.green { border-top-color: var(--green); }
+.narrative-card.red { border-top-color: var(--red); }
+.nc-icon { font-size: 1.2rem; margin-bottom: 0.5rem; }
+.nc-title { font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; color: var(--ink2); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.4rem; font-weight: 500; }
+.nc-body { font-size: 0.82rem; color: var(--muted); line-height: 1.6; }
+.nc-body strong { color: var(--ink); font-weight: 500; }
+
+/* Outliers + correlations table */
+.findings-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem; }
+.findings-card { background: var(--surface); border: 1px solid var(--border); overflow: hidden; }
+.findings-header { padding: 0.8rem 1.2rem; border-bottom: 1px solid var(--border); background: var(--surface2); font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; color: var(--ink2); letter-spacing: 0.1em; text-transform: uppercase; }
+.findings-body { padding: 0; }
+.finding-row { display: flex; align-items: center; justify-content: space-between; padding: 0.7rem 1.2rem; border-bottom: 1px solid var(--border); font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; }
+.finding-row:last-child { border-bottom: none; }
+.finding-row:hover { background: var(--bg); }
+.finding-label { color: var(--ink2); max-width: 65%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.finding-value { font-weight: 500; }
+.finding-value.pos { color: var(--green); }
+.finding-value.neg { color: var(--red); }
+.finding-value.neutral { color: var(--blue); }
+
+/* Data table */
+.data-preview { background: var(--surface); border: 1px solid var(--border); margin-bottom: 2rem; overflow: hidden; }
+.data-preview-header { padding: 0.8rem 1.5rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.data-table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; }
+th { padding: 0.6rem 1rem; text-align: left; background: var(--surface2); font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--border); white-space: nowrap; }
+td { padding: 0.55rem 1rem; border-bottom: 1px solid var(--border); color: var(--ink2); white-space: nowrap; }
+tr:hover td { background: var(--bg); }
+
+.col-pills { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1.5rem; }
+.col-pill { font-family: 'JetBrains Mono', monospace; font-size: 0.58rem; padding: 0.25rem 0.6rem; border-radius: 2px; letter-spacing: 0.06em; }
+.col-pill.numeric { background: var(--teal-pale); color: var(--teal); border: 1px solid rgba(26,122,110,0.3); }
+.col-pill.text { background: var(--blue-pale); color: var(--blue); border: 1px solid rgba(37,99,184,0.3); }
+.col-pill.date { background: var(--amber-pale); color: var(--amber); border: 1px solid rgba(212,134,10,0.3); }
+
+@media (max-width: 768px) {
+  .charts-grid { grid-template-columns: 1fr; }
+  .kpi-grid { grid-template-columns: 1fr 1fr; }
+  .narrative-grid { grid-template-columns: 1fr; }
+  .findings-row { grid-template-columns: 1fr; }
+  .dash-body { padding: 1rem; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="brand">
+    <div class="brand-mark">DP</div>
+    <div class="brand-name">Data<span>Pulse</span></div>
+  </div>
+  <div class="header-tag">Instant KPI Dashboard · No sign-up required</div>
+</div>
+
+<div id="uploadScreen" class="upload-screen">
+  <div class="upload-eyebrow">Zero setup · Works offline</div>
+  <h1 class="upload-title">Your data,<br/>instantly <em>visual</em></h1>
+  <p class="upload-sub">Drop any CSV file. DataPulse auto-detects your columns, builds KPI cards, charts, statistical insights, trend analysis, outlier detection — all in your browser with no server needed.</p>
+
+  <div class="drop-zone" id="dropZone" onclick="document.getElementById('csvInput').click()">
+    <div class="drop-icon">📂</div>
+    <div class="drop-text">Drop a CSV here, or click to browse</div>
+    <button class="drop-btn" type="button">Choose CSV File ↑</button>
+    <input type="file" id="csvInput" accept=".csv" onchange="handleCSV(this)"/>
+  </div>
+
+  <button class="sample-btn" onclick="loadSample()">⚡ Try with Sample Financial Data</button>
+
+  <div class="feature-row">
+    <div class="feature-pill"><span>●</span> Auto KPI Detection</div>
+    <div class="feature-pill"><span>●</span> Trend Analysis</div>
+    <div class="feature-pill"><span>●</span> Outlier Detection</div>
+    <div class="feature-pill"><span>●</span> Correlation Finder</div>
+    <div class="feature-pill"><span>●</span> Smart Insights</div>
+    <div class="feature-pill"><span>●</span> Export Dashboard</div>
+  </div>
+</div>
+
+<div id="dashboard">
+  <div class="dash-topbar">
+    <div style="display:flex;align-items:center;gap:1.5rem">
+      <div class="dash-filename" id="dashFilename">📊 data.csv</div>
+      <div class="dash-meta" id="dashMeta">—</div>
+    </div>
+    <div class="dash-actions">
+      <button class="dash-btn" onclick="document.getElementById('csvInput2').click()">↑ New File</button>
+      <input type="file" id="csvInput2" accept=".csv" style="display:none" onchange="handleCSV(this)"/>
+      <button class="dash-btn primary" onclick="exportHTML()">↓ Export HTML</button>
+    </div>
+  </div>
+
+  <div class="dash-body">
+
+    <!-- Column types -->
+    <div class="section-label">Column Types Detected</div>
+    <div class="col-pills" id="colPills"></div>
+
+    <!-- KPIs -->
+    <div class="section-label">Key Performance Indicators</div>
+    <div class="kpi-grid" id="kpiGrid"></div>
+
+    <!-- Charts -->
+    <div class="section-label">Visualizations</div>
+    <div class="charts-grid" id="chartsGrid"></div>
+
+    <!-- Statistical Insights -->
+    <div class="section-label">Statistical Insights</div>
+    <div class="narrative-section">
+      <div class="narrative-grid" id="narrativeGrid"></div>
+    </div>
+
+    <!-- Findings -->
+    <div class="findings-row" id="findingsRow"></div>
+
+    <!-- Data Preview -->
+    <div class="section-label">Data Preview</div>
+    <div class="data-preview">
+      <div class="data-preview-header">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:0.6rem;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase">First 10 Rows</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:0.58rem;color:var(--faint)" id="totalRowsLabel"></div>
+      </div>
+      <div class="data-table-wrap"><table id="dataTable"></table></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ─ Drag/drop ─
+const dz = document.getElementById('dropZone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('dragover'); const f=e.dataTransfer.files[0]; if(f) processFile(f); });
+function handleCSV(input) { if(input.files[0]) processFile(input.files[0]); }
+function processFile(f) { const r=new FileReader(); r.onload=e=>parseAndRender(e.target.result, f.name); r.readAsText(f); }
+
+// ─ CSV Parser ─
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  const headers = lines[0].split(',').map(h => h.replace(/"/g,'').trim());
+  const rows = lines.slice(1).map(line => {
+    const vals=[]; let inQ=false, cur='';
+    for(let c of line){ if(c==='"'){inQ=!inQ} else if(c===','&&!inQ){vals.push(cur.trim());cur=''} else cur+=c; }
+    vals.push(cur.trim());
+    const row={}; headers.forEach((h,i)=>row[h]=vals[i]!==undefined?vals[i]:''); return row;
+  }).filter(r=>Object.values(r).some(v=>v!==''));
+  return { headers, rows };
+}
+
+function detectType(values) {
+  const ne=values.filter(v=>v!==''&&v!=null);
+  if(!ne.length) return 'text';
+  const numOk=ne.filter(v=>!isNaN(parseFloat(v.toString().replace(/[$,%\s]/g,'')))).length;
+  if(numOk/ne.length>0.8) return 'numeric';
+  const dateOk=ne.filter(v=>!isNaN(Date.parse(v))&&v.length>4).length;
+  if(dateOk/ne.length>0.7) return 'date';
+  return 'text';
+}
+
+function pn(v){ return parseFloat(String(v).replace(/[$,%\s,]/g,''))||0; }
+function fmtN(n) {
+  if(Math.abs(n)>=1e9) return (n/1e9).toFixed(2)+'B';
+  if(Math.abs(n)>=1e6) return (n/1e6).toFixed(2)+'M';
+  if(Math.abs(n)>=1e3) return (n/1e3).toFixed(1)+'K';
+  return n.toLocaleString(undefined,{maximumFractionDigits:2});
+}
+function fmtPct(n){ return (n>=0?'+':'')+n.toFixed(1)+'%'; }
+
+const COLORS=['#e85d3a','#1a7a6e','#d4860a','#2563b8','#7c3aed','#e85d8a','#3ab88a','#b87c3a','#6b8ab8','#a87c3a'];
+
+let chartInstances={};
+function destroyCharts(){ Object.values(chartInstances).forEach(c=>c.destroy()); chartInstances={}; }
+
+function baseChartOpts(){ return {
+  responsive:true, maintainAspectRatio:false,
+  plugins:{ legend:{ labels:{font:{family:'JetBrains Mono',size:10},color:'#8a847a',boxWidth:10} }, tooltip:{ backgroundColor:'rgba(26,22,18,0.95)', borderColor:'#ddd9d0', borderWidth:1, titleFont:{family:'JetBrains Mono',size:11}, bodyFont:{family:'JetBrains Mono',size:10} } },
+  scales:{ x:{ ticks:{color:'#8a847a',font:{family:'JetBrains Mono',size:9},maxTicksLimit:12}, grid:{color:'rgba(200,195,184,0.3)'} }, y:{ ticks:{color:'#8a847a',font:{family:'JetBrains Mono',size:9},callback:v=>fmtN(v)}, grid:{color:'rgba(200,195,184,0.3)'} } }
+}; }
+
+// ─ Statistics helpers ─
+function stats(arr) {
+  const n=arr.length; if(!n) return null;
+  const sorted=[...arr].sort((a,b)=>a-b);
+  const sum=arr.reduce((a,b)=>a+b,0);
+  const mean=sum/n;
+  const variance=arr.reduce((a,b)=>a+(b-mean)**2,0)/n;
+  const std=Math.sqrt(variance);
+  const q1=sorted[Math.floor(n*0.25)];
+  const median=sorted[Math.floor(n*0.5)];
+  const q3=sorted[Math.floor(n*0.75)];
+  const iqr=q3-q1;
+  return { n, sum, mean, std, median, q1, q3, iqr, min:sorted[0], max:sorted[n-1] };
+}
+
+function pearsonCorr(a, b) {
+  const n=a.length; if(n<3) return null;
+  const ma=a.reduce((s,v)=>s+v,0)/n, mb=b.reduce((s,v)=>s+v,0)/n;
+  let num=0,da=0,db=0;
+  for(let i=0;i<n;i++){ const x=a[i]-ma,y=b[i]-mb; num+=x*y; da+=x*x; db+=y*y; }
+  if(!da||!db) return null;
+  return num/Math.sqrt(da*db);
+}
+
+function detectTrend(vals) {
+  if(vals.length < 4) return null;
+  const n=vals.length;
+  const xMean=(n-1)/2;
+  const yMean=vals.reduce((a,b)=>a+b,0)/n;
+  let num=0,den=0;
+  for(let i=0;i<n;i++){ num+=(i-xMean)*(vals[i]-yMean); den+=(i-xMean)**2; }
+  const slope=num/den;
+  const r2=slope/(Math.abs(yMean)||1);
+  return { slope, pctPerStep: r2*100, direction: slope>0?'upward':'downward', strong: Math.abs(r2)>0.005 };
+}
+
+function detectOutliers(vals, s) {
+  const fence=1.5*s.iqr;
+  const lo=s.q1-fence, hi=s.q3+fence;
+  return vals.filter(v=>v<lo||v>hi);
+}
+
+// ─ MAIN RENDER ─
+function parseAndRender(csvText, filename='data.csv') {
+  const { headers, rows } = parseCSV(csvText);
+  if(!rows.length) return alert('Could not parse CSV.');
+
+  const colTypes={};
+  headers.forEach(h=>{ colTypes[h]=detectType(rows.map(r=>r[h])); });
+  const numCols=headers.filter(h=>colTypes[h]==='numeric');
+  const txtCols=headers.filter(h=>colTypes[h]==='text');
+  const dateCols=headers.filter(h=>colTypes[h]==='date');
+
+  document.getElementById('uploadScreen').style.display='none';
+  document.getElementById('dashboard').style.display='block';
+  document.getElementById('dashFilename').textContent='📊 '+filename;
+  document.getElementById('dashMeta').textContent=`${rows.length.toLocaleString()} rows · ${headers.length} cols · ${numCols.length} numeric · ${txtCols.length} categorical · ${dateCols.length} date`;
+  document.getElementById('totalRowsLabel').textContent=`${rows.length.toLocaleString()} total rows`;
+
+  // Column pills
+  document.getElementById('colPills').innerHTML=[
+    ...numCols.map(c=>`<span class="col-pill numeric"># ${c}</span>`),
+    ...txtCols.map(c=>`<span class="col-pill text">Aa ${c}</span>`),
+    ...dateCols.map(c=>`<span class="col-pill date">📅 ${c}</span>`)
+  ].join('');
+
+  // Pre-compute stats
+  const colStats={};
+  numCols.forEach(col=>{ const nums=rows.map(r=>pn(r[col])).filter(n=>!isNaN(n)&&isFinite(n)); colStats[col]=stats(nums)||{}; colStats[col].values=nums; });
+
+  destroyCharts();
+
+  // KPI grid
+  document.getElementById('kpiGrid').innerHTML = numCols.slice(0,8).map(col=>{
+    const s=colStats[col]; if(!s||!s.n) return '';
+    const trend=detectTrend(s.values.slice(-20));
+    const trendIcon=trend?.direction==='upward'?'↑':'↓';
+    const trendColor=trend?.direction==='upward'?'color:var(--green)':'color:var(--red)';
+    return `<div class="kpi-tile">
+      <div class="kpi-col">${col}</div>
+      <div class="kpi-main">${fmtN(s.sum)}</div>
+      <div class="kpi-stats">
+        <div class="kpi-stat">Avg <strong>${fmtN(s.mean)}</strong></div>
+        <div class="kpi-stat">Med <strong>${fmtN(s.median)}</strong></div>
+        <div class="kpi-stat">Max <strong>${fmtN(s.max)}</strong></div>
+        <div class="kpi-stat">Min <strong>${fmtN(s.min)}</strong></div>
+        <div class="kpi-stat">σ <strong>${fmtN(s.std)}</strong></div>
+        ${trend&&trend.strong?`<div class="kpi-stat" style="${trendColor}"><strong>${trendIcon} ${Math.abs(trend.pctPerStep).toFixed(1)}%/step</strong></div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+
+  // Charts
+  buildCharts(headers, rows, colTypes, numCols, txtCols, dateCols, colStats);
+
+  // Statistical insights
+  buildInsights(headers, rows, colTypes, numCols, txtCols, dateCols, colStats);
+
+  // Findings (outliers + correlations)
+  buildFindings(numCols, colStats);
+
+  // Data table
+  const previewRows=rows.slice(0,10);
+  document.getElementById('dataTable').innerHTML=
+    `<thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead>`+
+    `<tbody>${previewRows.map(row=>`<tr>${headers.map(h=>`<td>${row[h]||''}</td>`).join('')}</tr>`).join('')}</tbody>`;
+}
+
+function buildCharts(headers, rows, colTypes, numCols, txtCols, dateCols, colStats) {
+  const cg=document.getElementById('chartsGrid'); cg.innerHTML='';
+  const addChart=(title, sub, configFn) => {
+    const id='c_'+Math.random().toString(36).slice(2);
+    const div=document.createElement('div'); div.className='chart-tile';
+    div.innerHTML=`<div class="chart-tile-header"><div class="chart-tile-title">${title}</div><div class="chart-tile-sub">${sub}</div></div><div class="chart-wrap"><canvas id="${id}"></canvas></div>`;
+    cg.appendChild(div);
+    setTimeout(()=>{ const ctx=document.getElementById(id)?.getContext('2d'); if(ctx) chartInstances[id]=configFn(ctx); },50);
+  };
+
+  const opts=baseChartOpts();
+
+  // 1. Bar: top text col vs top numeric col
+  if(txtCols.length && numCols.length) {
+    const cat=txtCols[0], val=numCols[0];
+    const grouped={};
+    rows.forEach(r=>{ const k=(r[cat]||'Unknown').slice(0,20); grouped[k]=(grouped[k]||0)+pn(r[val]); });
+    const sorted=Object.entries(grouped).sort((a,b)=>b[1]-a[1]).slice(0,12);
+    addChart(`${val} by ${cat}`, 'Bar Chart', ctx=>new Chart(ctx,{
+      type:'bar',
+      data:{ labels:sorted.map(e=>e[0]), datasets:[{ data:sorted.map(e=>e[1]), backgroundColor:COLORS.map(c=>c+'cc'), borderColor:COLORS, borderWidth:1 }] },
+      options:{...opts,plugins:{...opts.plugins,legend:{display:false}}}
+    }));
+  }
+
+  // 2. Line: date or index trend
+  if(dateCols.length && numCols.length) {
+    const dc=dateCols[0], val=numCols[0];
+    const grouped={};
+    rows.forEach(r=>{ const d=new Date(r[dc]); if(!isNaN(d)){ const k=d.toISOString().slice(0,7); grouped[k]=(grouped[k]||0)+pn(r[val]); }});
+    const sorted=Object.entries(grouped).sort((a,b)=>a[0].localeCompare(b[0]));
+    if(sorted.length>=3) {
+      addChart(`${val} Over Time`,'Line Chart',ctx=>new Chart(ctx,{
+        type:'line',
+        data:{ labels:sorted.map(e=>e[0]), datasets:[{ label:val, data:sorted.map(e=>e[1]), borderColor:'#e85d3a', backgroundColor:'rgba(232,93,58,0.07)', borderWidth:2, pointRadius:3, tension:0.4, fill:true }] },
+        options:opts
+      }));
+    }
+  } else if(numCols.length>=2) {
+    const c1=numCols[0],c2=numCols[1];
+    const sl=rows.slice(0,60);
+    addChart(`${c1} vs ${c2}`,'Trend Comparison',ctx=>new Chart(ctx,{
+      type:'line',
+      data:{ labels:sl.map((_,i)=>i+1), datasets:[
+        { label:c1, data:sl.map(r=>pn(r[c1])), borderColor:'#e85d3a', backgroundColor:'transparent', borderWidth:2, pointRadius:2, tension:0.3 },
+        { label:c2, data:sl.map(r=>pn(r[c2])), borderColor:'#1a7a6e', backgroundColor:'transparent', borderWidth:2, pointRadius:2, tension:0.3 }
+      ]},
+      options:opts
+    }));
+  }
+
+  // 3. Donut: categorical breakdown
+  if(txtCols.length) {
+    const cat=txtCols[txtCols.length>1?1:0], val=numCols[0];
+    const grouped={};
+    rows.forEach(r=>{ const k=(r[cat]||'Unknown').slice(0,20); grouped[k]=(grouped[k]||0)+(val?pn(r[val]):1); });
+    const sorted=Object.entries(grouped).sort((a,b)=>b[1]-a[1]).slice(0,8);
+    addChart(val?`${val} by ${cat}`:`${cat} Distribution`,'Donut Chart',ctx=>new Chart(ctx,{
+      type:'doughnut',
+      data:{ labels:sorted.map(e=>e[0]), datasets:[{ data:sorted.map(e=>e[1]), backgroundColor:COLORS.map(c=>c+'cc'), borderColor:COLORS, borderWidth:2 }] },
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'right', labels:{font:{family:'JetBrains Mono',size:10},color:'#3d3830',boxWidth:10} }, tooltip:{ backgroundColor:'rgba(26,22,18,0.95)', borderColor:'#ddd9d0', borderWidth:1 } } }
+    }));
+  }
+
+  // 4. Distribution histogram for first numeric col
+  if(numCols.length) {
+    const col=numCols[0]; const s=colStats[col];
+    const vals=s.values; const buckets=20;
+    const bSize=(s.max-s.min)/buckets||1;
+    const counts=new Array(buckets).fill(0);
+    vals.forEach(v=>{ const idx=Math.min(buckets-1,Math.floor((v-s.min)/bSize)); counts[idx]++; });
+    addChart(`${col} Distribution`,'Histogram',ctx=>new Chart(ctx,{
+      type:'bar',
+      data:{ labels:counts.map((_,i)=>fmtN(s.min+i*bSize)), datasets:[{ data:counts, backgroundColor:'rgba(37,99,184,0.6)', borderColor:'#2563b8', borderWidth:1 }] },
+      options:{...opts,plugins:{...opts.plugins,legend:{display:false}},scales:{x:{display:false},y:{...opts.scales.y}}}
+    }));
+  }
+
+  // 5. Additional numeric bar if 3+ numeric cols
+  if(numCols.length>=3 && txtCols.length) {
+    const cat=txtCols[0], val=numCols[2];
+    const grouped={};
+    rows.forEach(r=>{ const k=(r[cat]||'Unknown').slice(0,20); grouped[k]=(grouped[k]||0)+pn(r[val]); });
+    const sorted=Object.entries(grouped).sort((a,b)=>b[1]-a[1]).slice(0,10);
+    addChart(`${val} by ${cat}`,'Horizontal Bar',ctx=>new Chart(ctx,{
+      type:'bar',
+      data:{ labels:sorted.map(e=>e[0]), datasets:[{ data:sorted.map(e=>e[1]), backgroundColor:'rgba(124,58,237,0.6)', borderColor:'#7c3aed', borderWidth:1 }] },
+      options:{...opts,indexAxis:'y',plugins:{...opts.plugins,legend:{display:false}}}
+    }));
+  }
+}
+
+function buildInsights(headers, rows, colTypes, numCols, txtCols, dateCols, colStats) {
+  const cards=[];
+
+  // 1. Dataset overview
+  const numNullCells=rows.reduce((cnt,row)=>cnt+headers.filter(h=>!row[h]||row[h]==='').length,0);
+  const completeness=((1-numNullCells/(rows.length*headers.length))*100).toFixed(1);
+  cards.push({ color:'coral', icon:'📋', title:'Dataset Overview', body:`<strong>${rows.length.toLocaleString()} rows</strong> across <strong>${headers.length} columns</strong>. Data completeness: <strong>${completeness}%</strong>. ${numCols.length} numeric column${numCols.length!==1?'s':''}, ${txtCols.length} categorical, ${dateCols.length} date.` });
+
+  // 2. Largest numeric column trend
+  if(numCols.length) {
+    const col=numCols[0]; const s=colStats[col];
+    const trend=detectTrend(s.values);
+    const cv=(s.std/Math.abs(s.mean||1)*100).toFixed(1);
+    const skew=s.mean>s.median?'right-skewed (mean > median — likely outliers pulling up)':'left-skewed (mean < median)';
+    cards.push({ color:'teal', icon:'📈', title:`${col} — Distribution`, body:`Sum: <strong>${fmtN(s.sum)}</strong>. Mean: <strong>${fmtN(s.mean)}</strong>, Median: <strong>${fmtN(s.median)}</strong>. Coefficient of variation: <strong>${cv}%</strong>. Distribution is ${s.mean>s.median?skew:skew}${trend&&trend.strong?`. Overall trend: <strong>${trend.direction}</strong>.`:'.'}`});
+  }
+
+  // 3. Trend detection across date/time
+  if(dateCols.length && numCols.length) {
+    const dc=dateCols[0], val=numCols[0];
+    const grouped={};
+    rows.forEach(r=>{ const d=new Date(r[dc]); if(!isNaN(d)){ const k=d.toISOString().slice(0,7); grouped[k]=(grouped[k]||0)+pn(r[val]); }});
+    const timeSeries=Object.entries(grouped).sort((a,b)=>a[0].localeCompare(b[0])).map(e=>e[1]);
+    const trend=detectTrend(timeSeries);
+    if(trend && timeSeries.length>=3) {
+      const first=timeSeries[0], last=timeSeries[timeSeries.length-1];
+      const totalChg=((last-first)/Math.abs(first||1)*100).toFixed(1);
+      cards.push({ color:trend.direction==='upward'?'green':'red', icon:'📅', title:`Time Trend: ${val}`, body:`Over <strong>${timeSeries.length} periods</strong>, <strong>${val}</strong> moved from <strong>${fmtN(first)}</strong> to <strong>${fmtN(last)}</strong> — a total change of <strong>${fmtPct(parseFloat(totalChg))}</strong>. Trend is <strong>${trend.direction}</strong> at ~${Math.abs(trend.pctPerStep).toFixed(2)}%/period.`});
+    }
+  }
+
+  // 4. Top category by primary metric
+  if(txtCols.length && numCols.length) {
+    const cat=txtCols[0], val=numCols[0];
+    const grouped={};
+    rows.forEach(r=>{ const k=(r[cat]||'Unknown').slice(0,30); grouped[k]=(grouped[k]||0)+pn(r[val]); });
+    const sorted=Object.entries(grouped).sort((a,b)=>b[1]-a[1]);
+    const topName=sorted[0]?.[0], topVal=sorted[0]?.[1]||0;
+    const total=Object.values(grouped).reduce((a,b)=>a+b,0)||1;
+    const topShare=(topVal/total*100).toFixed(1);
+    if(sorted.length>=2) {
+      cards.push({ color:'amber', icon:'🏆', title:`Top ${cat}`, body:`<strong>${topName}</strong> leads with <strong>${fmtN(topVal)}</strong> in ${val}, representing <strong>${topShare}%</strong> of total. Bottom performer: <strong>${sorted[sorted.length-1][0]}</strong> at ${fmtN(sorted[sorted.length-1][1])}. Concentration among top 3: ${((sorted.slice(0,3).reduce((a,e)=>a+e[1],0)/total)*100).toFixed(1)}%.`});
+    }
+  }
+
+  // 5. Variability / volatility
+  if(numCols.length>=2) {
+    const ranked=numCols.map(c=>{ const s=colStats[c]; return { col:c, cv:s.std/Math.abs(s.mean||1) }; }).sort((a,b)=>b.cv-a.cv);
+    const highest=ranked[0], lowest=ranked[ranked.length-1];
+    cards.push({ color:'blue', icon:'📊', title:'Variability Analysis', body:`Most volatile column: <strong>${highest.col}</strong> (CV: ${(highest.cv*100).toFixed(1)}%). Most stable: <strong>${lowest.col}</strong> (CV: ${(lowest.cv*100).toFixed(1)}%). High CV indicates inconsistent values — worth investigating for data quality or natural volatility.`});
+  }
+
+  // 6. Second categorical breakdown
+  if(txtCols.length && numCols.length) {
+    const uniqueCounts=txtCols.map(c=>{ const uniq=new Set(rows.map(r=>r[c])).size; return { col:c, uniq }; });
+    const highCard=uniqueCounts.filter(e=>e.uniq>10);
+    const lowCard=uniqueCounts.filter(e=>e.uniq<=10&&e.uniq>1);
+    cards.push({ color:'purple', icon:'🔢', title:'Cardinality Report', body:`${lowCard.length>0?`Low-cardinality columns (good for grouping): <strong>${lowCard.map(e=>e.col+' ('+e.uniq+')').join(', ')}</strong>. `:''}${highCard.length>0?`High-cardinality columns (unique identifiers?): <strong>${highCard.map(e=>e.col).join(', ')}</strong>.`:''} ${uniqueCounts.length===0?'No categorical columns detected.':''}`});
+  }
+
+  const colors=['coral','teal','green','amber','blue','purple','red','neutral'];
+  document.getElementById('narrativeGrid').innerHTML=cards.slice(0,6).map((c,i)=>`
+    <div class="narrative-card ${c.color||colors[i%colors.length]}">
+      <div class="nc-icon">${c.icon}</div>
+      <div class="nc-title">${c.title}</div>
+      <div class="nc-body">${c.body}</div>
+    </div>`).join('');
+}
+
+function buildFindings(numCols, colStats) {
+  const fr=document.getElementById('findingsRow');
+
+  // Outliers
+  let outlierHtml='';
+  numCols.slice(0,6).forEach(col=>{
+    const s=colStats[col]; if(!s||!s.iqr) return;
+    const outliers=detectOutliers(s.values,s);
+    if(outliers.length) {
+      outlierHtml+=`<div class="finding-row">
+        <div class="finding-label">${col} (${outliers.length} outlier${outliers.length!==1?'s':''})</div>
+        <div class="finding-value ${outliers.some(v=>v>s.q3+1.5*s.iqr)?'neg':'pos'}">
+          ${outliers.length>0?`${outliers.length} detected`:'-'}
+        </div>
+      </div>`;
+    }
+  });
+  if(!outlierHtml) outlierHtml='<div class="finding-row"><div class="finding-label">No statistical outliers detected</div><div class="finding-value neutral">✓ Clean</div></div>';
+
+  // Correlations
+  let corrHtml='';
+  const pairs=[];
+  for(let i=0;i<Math.min(numCols.length,5);i++) {
+    for(let j=i+1;j<Math.min(numCols.length,5);j++) {
+      const a=colStats[numCols[i]].values, b=colStats[numCols[j]].values;
+      const minLen=Math.min(a.length,b.length);
+      if(minLen<5) continue;
+      const r=pearsonCorr(a.slice(0,minLen),b.slice(0,minLen));
+      if(r!==null) pairs.push({ a:numCols[i], b:numCols[j], r });
+    }
+  }
+  pairs.sort((a,b)=>Math.abs(b.r)-Math.abs(a.r));
+  corrHtml=pairs.slice(0,6).map(p=>{
+    const strength=Math.abs(p.r)>0.7?'Strong':Math.abs(p.r)>0.4?'Moderate':'Weak';
+    const cls=p.r>0.4?'pos':p.r<-0.4?'neg':'neutral';
+    return `<div class="finding-row">
+      <div class="finding-label">${p.a} ↔ ${p.b}</div>
+      <div class="finding-value ${cls}">${strength} ${p.r>0?'↑':'↓'} (r=${p.r.toFixed(2)})</div>
+    </div>`;
+  }).join('');
+  if(!corrHtml) corrHtml='<div class="finding-row"><div class="finding-label">Not enough numeric columns for correlation</div><div class="finding-value neutral">—</div></div>';
+
+  fr.innerHTML=`
+    <div class="findings-card">
+      <div class="findings-header">🚨 Outlier Detection (IQR Method)</div>
+      <div class="findings-body">${outlierHtml}</div>
+    </div>
+    <div class="findings-card">
+      <div class="findings-header">🔗 Pearson Correlation Matrix</div>
+      <div class="findings-body">${corrHtml}</div>
+    </div>`;
+}
+
+function exportHTML(){
+  const blob=new Blob([`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>DataPulse Export</title></head><body>${document.getElementById('dashboard').outerHTML}</body></html>`],{type:'text/html'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='datapulse-export.html'; a.click();
+}
+
+function loadSample(){
+  const csv=`Month,Revenue,Expenses,Profit,Customers,Units_Sold,Region,Department
+Jan-2024,125000,82000,43000,342,1240,North,Sales
+Feb-2024,138000,88000,50000,378,1380,North,Sales
+Mar-2024,142000,91000,51000,401,1420,South,Marketing
+Apr-2024,155000,95000,60000,445,1550,South,Marketing
+May-2024,148000,93000,55000,421,1480,East,Sales
+Jun-2024,162000,99000,63000,489,1620,East,Marketing
+Jul-2024,171000,103000,68000,512,1710,West,Sales
+Aug-2024,165000,100000,65000,498,1650,West,Engineering
+Sep-2024,310000,108000,202000,534,3100,North,Sales
+Oct-2024,185000,112000,73000,567,1850,South,Marketing
+Nov-2024,192000,115000,77000,589,1920,East,Sales
+Dec-2024,210000,122000,88000,634,2100,West,Engineering`;
+  parseAndRender(csv,'sample_financials.csv');
+}
+</script>
+</body>
+</html>
